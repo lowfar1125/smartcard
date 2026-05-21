@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartCard Box - V67</title>
+    <title>SmartCard Box - V67 (Auto-Detect Model)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -245,13 +245,10 @@
             <div class="mb-5 p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <div class="flex justify-between items-center mb-2">
                     <label class="block text-xs font-bold text-slate-600">AI 模型</label>
-                    <button onclick="runDiagnostics()" class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-200 transition flex items-center gap-1 font-bold"><span class="material-icons text-[14px]">refresh</span> 偵測</button>
+                    <button onclick="runDiagnostics()" class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-200 transition flex items-center gap-1 font-bold"><span class="material-icons text-[14px]">refresh</span> 重新偵測</button>
                 </div>
                 <select id="modelSelect" class="w-full border border-slate-300 p-2.5 rounded-lg bg-white outline-none mb-2 text-sm">
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (目前推薦)</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (進階辨識)</option>
-                    <option value="gemini-flash">Gemini Flash (自動對應最新版)</option>
-                    <option value="gemini-pro">Gemini Pro (自動對應最新版)</option>
+                    <option value="">請點擊偵測以讀取最新模型...</option>
                 </select>
                 <div id="diagResult" class="hidden mt-3 p-3 bg-slate-900 text-green-400 text-xs font-mono rounded-lg overflow-x-auto whitespace-pre-wrap max-h-32"></div>
             </div>
@@ -301,10 +298,8 @@
             if(window.innerWidth >= 768 && cards.length > 0) openDetail(cards[0].id);
         };
 
-        // V62 FIX: Device orientation/resize listener to sync views
         window.addEventListener('resize', () => {
             if (window.innerWidth >= 768) {
-                // Desktop Mode constraints
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('sidebar').classList.add('flex');
                 document.getElementById('mainContent').classList.remove('hidden');
@@ -324,7 +319,6 @@
                     if (cards.length > 0) openDetail(cards[0].id);
                 }
             } else {
-                // Mobile Mode constraints
                 if (currentEditingId) {
                     document.getElementById('sidebar').classList.add('hidden');
                     document.getElementById('sidebar').classList.remove('flex');
@@ -339,7 +333,6 @@
             }
         });
 
-        // V62 FIX: Strict view toggling for RWD
         function updateView(viewType) {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
@@ -348,7 +341,6 @@
             const mobileNav = document.getElementById('mobileNav');
 
             if (window.innerWidth < 768) {
-                // Mobile
                 if (viewType === 'list') {
                     sidebar.classList.remove('hidden');
                     sidebar.classList.add('flex');
@@ -368,7 +360,6 @@
                     detail.classList.add('flex');
                 }
             } else {
-                // Desktop
                 sidebar.classList.remove('hidden');
                 sidebar.classList.add('flex');
                 mainContent.classList.remove('hidden');
@@ -410,7 +401,6 @@
             document.getElementById('fileInput').click();
         }
 
-        // --- 手機版專用 FAB 控制邏輯 ---
         function toggleFabMenu() {
             const cameraCont = document.getElementById('fabCameraContainer');
             const albumCont = document.getElementById('fabAlbumContainer');
@@ -420,18 +410,14 @@
             if (isFabOpen) {
                 cameraCont.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
                 cameraCont.classList.add('opacity-100', 'translate-y-0');
-                
                 albumCont.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
                 albumCont.classList.add('opacity-100', 'translate-y-0');
-                
                 mainFabIcon.style.transform = 'rotate(135deg)';
             } else {
                 cameraCont.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
                 cameraCont.classList.remove('opacity-100', 'translate-y-0');
-                
                 albumCont.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
                 albumCont.classList.remove('opacity-100', 'translate-y-0');
-                
                 mainFabIcon.style.transform = 'rotate(0deg)';
             }
         }
@@ -477,7 +463,7 @@
                     cards: cards,
                     settings: { 
                         apiKey: includeKey ? (localStorage.getItem('geminiApiKey') || '') : "", 
-                        model: localStorage.getItem('geminiModel') || 'gemini-1.5-flash' 
+                        model: localStorage.getItem('geminiModel') || '' 
                     }
                 };
                 const dataStr = JSON.stringify(backupData);
@@ -600,7 +586,8 @@
                 const compressedData = await compressImage(file, 1200);
                 const newBase64 = compressedData.base64;
                 const apiKey = localStorage.getItem('geminiApiKey');
-                const model = localStorage.getItem('geminiModel') || 'gemini-1.5-flash';
+                const model = localStorage.getItem('geminiModel');
+                if (!model) { alert('請先到設定中偵測並選擇 AI 模型'); openSettings(); return; }
                 const aiResult = await callGemini(newBase64, apiKey, model); 
                 
                 const c = cards.find(x => x.id === currentEditingId);
@@ -642,7 +629,6 @@
             document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
 
-        // --- V61: 掃碼修復 (QR Error Fix) ---
         function openQrModal() {
             if (typeof QRCode === 'undefined') { alert("⚠️ QR Code 元件載入失敗。\n請檢查您的網路連線。"); return; }
             
@@ -655,7 +641,6 @@
             const container = document.getElementById("qrcode"); 
             container.innerHTML = ""; 
             
-            // 安全處理 null / undefined
             const safeStr = (str) => str ? str : '';
 
             let vcard = `BEGIN:VCARD\nVERSION:3.0\nN;CHARSET=UTF-8:;${safeStr(c.name)};;;\nFN;CHARSET=UTF-8:${safeStr(c.name)}\nORG;CHARSET=UTF-8:${safeStr(c.company)}\nTITLE;CHARSET=UTF-8:${safeStr(c.title)}\nTEL;TYPE=CELL:${safeStr(c.mobile)}\nTEL;TYPE=WORK:${safeStr(c.landline)}\nEMAIL:${safeStr(c.email)}\nADR;TYPE=WORK;CHARSET=UTF-8:;;${safeStr(c.address)};;;;\nEND:VCARD`;
@@ -761,11 +746,11 @@
             else { if(cards.length > 0) openDetail(cards[0].id); else updateView('welcome'); } 
         }
         
-        function runDiagnostics() { const apiKey = document.getElementById('apiKeyInput').value.trim(); const resultBox = document.getElementById('diagResult'); const selectBox = document.getElementById('modelSelect'); if (!apiKey) { alert("請先輸入 Key"); return; } resultBox.classList.remove('hidden'); resultBox.innerText = "查詢中..."; fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`).then(r=>r.json()).then(d=>{ if(d.error) throw new Error(d.error.message); const list = (d.models||[]).filter(m => m.supportedGenerationMethods?.includes('generateContent') && /gemini|flash|pro/.test(m.name)); selectBox.innerHTML = ''; list.forEach(m => selectBox.add(new Option(m.name.replace('models/',''), m.name.replace('models/','')))); resultBox.innerText = "✅ 已更新可用模型清單"; }).catch(e=>resultBox.innerText="❌ "+e.message); }
+        function runDiagnostics(savedModelStr) { const apiKey = document.getElementById('apiKeyInput').value.trim(); const resultBox = document.getElementById('diagResult'); const selectBox = document.getElementById('modelSelect'); if (!apiKey) { alert("請先輸入 Key"); return; } resultBox.classList.remove('hidden'); resultBox.innerText = "查詢中..."; fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`).then(r=>r.json()).then(d=>{ if(d.error) throw new Error(d.error.message); const list = (d.models||[]).filter(m => m.supportedGenerationMethods?.includes('generateContent') && /gemini/i.test(m.name)); selectBox.innerHTML = ''; let foundSaved = false; list.forEach(m => { const val = m.name.replace('models/',''); selectBox.add(new Option(val, val)); if (val === savedModelStr) foundSaved = true; }); if (savedModelStr && foundSaved) { selectBox.value = savedModelStr; } else if (selectBox.options.length > 0) { for(let i=0; i<selectBox.options.length; i++) { if(selectBox.options[i].value.includes('flash')) { selectBox.value = selectBox.options[i].value; break; } } } resultBox.innerText = "✅ 已更新可用模型清單"; }).catch(e=>{ selectBox.innerHTML = '<option value="">獲取失敗</option>'; resultBox.innerText="❌ "+e.message; }); }
         function toggleLoading(show, text='', model='') { const el = document.getElementById('loadingState'); if (show) { el.classList.remove('hidden'); el.classList.add('flex'); document.getElementById('loadingTitle').innerText = text; document.getElementById('currentModelDisplay').innerText = `Model: ${model}`; document.getElementById('progressBar').style.width = '0%'; } else { el.classList.add('hidden'); el.classList.remove('flex'); } }
         function updateProgress(text, percent) { document.getElementById('loadingTitle').innerText = text; document.getElementById('progressBar').style.width = `${percent}%`; }
-        function openSettings() { document.getElementById('apiKeyInput').value = localStorage.getItem('geminiApiKey') || ''; document.getElementById('settingsModal').classList.remove('hidden'); document.getElementById('settingsModal').classList.add('flex'); }
-        function saveSettings() { const k = document.getElementById('apiKeyInput').value.trim(); const m = document.getElementById('modelSelect').value; if(k) { localStorage.setItem('geminiApiKey', k); localStorage.setItem('geminiModel', m); closeModal('settingsModal'); alert('設定已儲存！'); checkFirstRun(); } }
+        function openSettings() { const apiKey = localStorage.getItem('geminiApiKey') || ''; document.getElementById('apiKeyInput').value = apiKey; document.getElementById('settingsModal').classList.remove('hidden'); document.getElementById('settingsModal').classList.add('flex'); if (apiKey) { runDiagnostics(localStorage.getItem('geminiModel')); } }
+        function saveSettings() { const k = document.getElementById('apiKeyInput').value.trim(); const m = document.getElementById('modelSelect').value; if(!k) { alert("請輸入 API Key"); return; } if(!m) { alert("請先點擊「偵測」並選擇一個 AI 模型"); return; } localStorage.setItem('geminiApiKey', k); localStorage.setItem('geminiModel', m); closeModal('settingsModal'); alert('設定已儲存！'); checkFirstRun(); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
         
         function compressImage(file, maxSide) {
@@ -791,7 +776,8 @@
             const files = event.target.files;
             if (!files || files.length === 0) return;
             const apiKey = localStorage.getItem('geminiApiKey');
-            const model = localStorage.getItem('geminiModel') || 'gemini-1.5-flash';
+            const model = localStorage.getItem('geminiModel');
+            if (!model) { alert('請先到設定中偵測並選擇 AI 模型'); openSettings(); return; }
             if (!apiKey) { alert('請先設定 API Key'); openSettings(); return; }
 
             const total = files.length;
@@ -863,13 +849,20 @@
             if (data.error) throw new Error(data.error.message); 
             
             let rawText = data.candidates[0].content.parts[0].text;
-            let jsonString = rawText.replace(/```json|```/g, '').trim();
-            const firstBrace = jsonString.indexOf('{');
-            const lastBrace = jsonString.lastIndexOf('}');
+            
+            const firstBrace = rawText.indexOf('{');
+            const lastBrace = rawText.lastIndexOf('}');
+            
             if (firstBrace !== -1 && lastBrace !== -1) {
-                jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+                let jsonString = rawText.substring(firstBrace, lastBrace + 1);
+                try {
+                    return JSON.parse(jsonString);
+                } catch (parseError) {
+                    throw new Error("AI 回傳的資料格式異常，無法解析：" + parseError.message);
+                }
+            } else {
+                throw new Error("AI 未回傳有效的名片資料格式");
             }
-            return JSON.parse(jsonString);
         }
 
         function cropImageByBox(base64, box, orientation) {
